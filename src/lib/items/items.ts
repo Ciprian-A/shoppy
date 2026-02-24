@@ -72,24 +72,29 @@ export const getItemsByCategory = async (categorySlug: string) => {
 }
 
 export const getFavouriteItemsByUser = async (userId: string) => {
-	const data = await prisma.item.findMany({
-		where: {
-			favourites: {
-				some: {
-					userId
+	try {
+		const data = await prisma.item.findMany({
+			where: {
+				favourites: {
+					some: {
+						userId
+					}
 				}
+			},
+			include: {
+				categories: true,
+				variants: true,
+				favourites: true
+			},
+			orderBy: {
+				createdAt: 'desc'
 			}
-		},
-		include: {
-			categories: true,
-			variants: true,
-			favourites: true
-		},
-		orderBy: {
-			createdAt: 'desc'
-		}
-	})
-	return data
+		})
+		return data
+	} catch (error) {
+		console.log('Error fetching favourite items for user:', error)
+		throw new Error('Failed to fetch favourite items for user.')
+	}
 }
 export const searchItemsByName = async (query: string) => {
 	const data = await prisma.item.findMany({

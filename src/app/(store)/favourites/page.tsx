@@ -1,8 +1,12 @@
-import ProductGrid from '@/components/ProductGrid'
+export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
+export const revalidate = 0
+
+import FavoritesPageClient from '@/components/FavoritePageClient'
+import FavoritesRefresher from '@/components/FavoritesRefresher'
+import ProductsView from '@/components/ProductsView'
 import {getFavouriteItemsByUser} from '@/lib/items/items'
 import {getCurrentUserFromDB} from '@/lib/users/actions/users'
-
-export const dynamic = 'force-dynamic'
 
 export default async function FavouritesPage() {
 	const currentUser = await getCurrentUserFromDB()
@@ -20,17 +24,20 @@ export default async function FavouritesPage() {
 		}))
 	}))
 
-	if (allFavouriteItems.length === 0) {
+	if (mappedProducts.length === 0) {
 		return (
-			<div className='container mx-auto p-4 flex flex-col items-center justify-center min-h-[50vh]'>
-				<h1 className='text-2xl font-bold mb-6 text-gray-800'>
-					Nothing to see here yet...
-				</h1>
-				<p className='text-gray-600 text-xl flex flex-col justify-center items-center'>
-					<span>Save your favourite items by tapping the ❤️ icon.</span>
-					<span>They will show up here for easy access anytime.</span>
-				</p>
-			</div>
+			<FavoritesPageClient>
+				<FavoritesRefresher />
+				<div className='container mx-auto p-4 flex flex-col items-center justify-center min-h-[50vh]'>
+					<h1 className='text-2xl font-bold mb-6 text-gray-800'>
+						Nothing to see here yet...
+					</h1>
+					<p className='text-gray-600 text-xl flex flex-col justify-center items-center'>
+						<span>Save your favourite items by tapping the ❤️ icon.</span>
+						<span>They will show up here for easy access anytime.</span>
+					</p>
+				</div>
+			</FavoritesPageClient>
 		)
 	}
 	return (
@@ -39,7 +46,7 @@ export default async function FavouritesPage() {
 				<h1 className='text-2xl font-bold mb-6 '>
 					{currentUser?.name}'s Favourites
 				</h1>
-				<ProductGrid products={mappedProducts} />
+				<ProductsView products={mappedProducts} />
 			</div>
 		</div>
 	)

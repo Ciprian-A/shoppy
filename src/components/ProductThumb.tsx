@@ -1,30 +1,23 @@
-import useStore from '@/app/(store)/store'
 import {useUser} from '@clerk/nextjs'
 import Image from 'next/image'
 import Link from 'next/link'
-import React from 'react'
+import React, {useState, useTransition} from 'react'
 
 import {useAuthModal} from '@/app/(store)/authModalStore'
+import {favoritesChannel} from '@/favoritesChannel'
 import {toggleFavoriteItem} from '@/lib/items/actions/items'
 import {ItemDTO} from '@/types/item'
 import {Heart} from 'lucide-react'
+import {useRouter} from 'next/navigation'
 
 const ProductThumb = ({product}: {product: ItemDTO}) => {
 	const {user} = useUser()
 	const {open: openAuthModal} = useAuthModal()
-	const {updateFavouriteItem} = useStore()
+	const router = useRouter()
+	const [isPending, startTransition] = useTransition()
+	const [isFavorite, setIsFavorite] = useState(product.favourites?.length! > 0)
 
 	const isOutOfStock = !product?.variants?.some(p => (p?.stock ?? 0) > 0)
-	const item = useStore(state =>
-		state.storeItems.find(i => i.id === product.id)
-	)
-	const isFavouriteInStore = useStore(state =>
-		state.favouriteItemIds.includes(product.id)
-	)
-	const isFavouriteInDB = product.favourites?.some(
-		fav => fav.userId === user?.id && fav.itemId === product.id
-	)
-	const isFavouriteItem = isFavouriteInStore || isFavouriteInDB
 
 	const handleFavouriteToggle = async (
 		e: React.MouseEvent<SVGSVGElement, MouseEvent>
@@ -32,19 +25,16 @@ const ProductThumb = ({product}: {product: ItemDTO}) => {
 		e.preventDefault()
 		e.stopPropagation()
 
-		if (!item?.id) return
 		if (!user) {
 			openAuthModal()
 			return
 		}
+		setIsFavorite(prev => !prev) // optimistic UI
 
-		updateFavouriteItem(item.id)
-
-		try {
-			await toggleFavoriteItem(user.id, item.id)
-		} catch (error) {
-			updateFavouriteItem(item.id)
-		}
+		startTransition(async () => {
+			await toggleFavoriteItem(user?.id!, product.id, product.slug)
+			favoritesChannel.postMessage({type: 'refresh'})
+		})
 	}
 	return (
 		<Link
@@ -61,7 +51,7 @@ const ProductThumb = ({product}: {product: ItemDTO}) => {
 							sizes='(max-width: 768px 100vw, (max-width: 1200px) 50vw, 33vw'
 						/>
 						<Heart
-							className={`child w-10 h-10 p-1 absolute top-2 right-2 transition-all bg-white shadow hover:shadow-md rounded-full ${isFavouriteItem ? 'text-red-500 fill-current' : ''}`}
+							className={`child w-10 h-10 p-1 absolute top-2 right-2 transition-all bg-white shadow hover:shadow-md rounded-full ${isFavorite ? 'text-red-500 fill-current' : ''}`}
 							onClick={handleFavouriteToggle}
 						/>
 					</div>

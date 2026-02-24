@@ -1,14 +1,21 @@
-import {ItemDTO} from '@/types/item'
 import {StateCreator} from 'zustand'
 
-export type StoreItem = ItemDTO & {
+export type Basket = {
+	uniqueKey: string
+	productId: string
+	name: string
+	slug: string
+	price: number
 	size: ItemSize
 	quantity: number
+	image: string
 }
+
 type StoreState = {
-	basketItems: StoreItem[]
-	storeItems: StoreItem[]
 	favouriteItemIds: string[]
+	selectedSizes: Record<string, ItemSize>
+	selectedQuantities: Record<string, number>
+	basket: Record<string, Basket>
 }
 export type ItemSize =
 	| '5'
@@ -36,20 +43,17 @@ export type ItemSize =
 	| '3XL'
 	| ''
 type StoreActions = {
-	setStoreItems: (items: ItemDTO[]) => void
-	getStoreItems: () => StoreItem[]
 	updateFavouriteItem: (itemId: string) => void
 	setSelectedSize: (id: string, size: ItemSize) => void
 	getSelectedSize: (id: string) => ItemSize
 	setSelectedQuantity: (id: string, qty: number) => void
 	getSelectedQuantity: (id: string) => number
-	addItemToBasket: (item: StoreItem, size: ItemSize, qty: number) => void
-	removeItem: (itemId: string) => void
+	addItemToBasket: (item: Basket) => void
+	removeItemFromBasket: (key: string) => void
 	incrementItemCount: (itemId: string) => void
 	decrementItemCount: (itemId: string) => void
 	getItemCount: (itemId: string) => number
 	getTotalPrice: () => number
-	getGroupedItems: () => StoreItem[]
 	clearBasket: () => void
 }
 
@@ -59,112 +63,89 @@ export const createStoreSlice: StateCreator<StoreSlice, [], [], StoreSlice> = (
 	set,
 	get
 ) => ({
-	basketItems: [],
-	storeItems: [],
 	favouriteItemIds: [],
-	setStoreItems: (items: ItemDTO[]) =>
-		set(() => ({
-			storeItems: items.map(item => ({
-				...item,
-				size: '',
-				quantity: 0
-			}))
-		})),
-	getStoreItems: () => get().storeItems,
+	selectedSizes: {},
+	selectedQuantities: {},
+	basket: {},
 	setSelectedSize: (id, size) => {
 		set(state => ({
-			storeItems: state.storeItems.map(item =>
-				item.id === id ? {...item, size} : item
-			)
+			selectedSizes: {
+				...state.selectedSizes,
+				[id]: size
+			}
 		}))
 	},
-	getSelectedSize: (id: string) => {
-		const foundItem = get().storeItems.find(item => item.id === id)
-		const size = foundItem && foundItem.size ? foundItem.size : ''
-		return size
-	},
-	setSelectedQuantity: (id, qty) => {
+	getSelectedSize: productId => get().selectedSizes[productId] ?? '',
+	setSelectedQuantity: (productId, qty) =>
 		set(state => ({
-			...state,
-			storeItems: state.storeItems.map(item =>
-				item.id === id ? {...item, quantity: qty} : item
-			)
-		}))
-	},
-	getSelectedQuantity: (id: string) => {
-		const foundItem = get().storeItems.find(item => item.id === id)
-		const quantity = foundItem && foundItem.quantity ? foundItem.quantity : 1
-		return quantity
-	},
-	getItemFromStore: (itemId: string) =>
-		get().storeItems.find(p => p.id === itemId),
+			selectedQuantities: {
+				...state.selectedQuantities,
+				[productId]: qty
+			}
+		})),
+	getSelectedQuantity: productId => get().selectedQuantities[productId] ?? 1,
 	updateFavouriteItem: itemId =>
 		set(state => ({
 			favouriteItemIds: state.favouriteItemIds.includes(itemId)
 				? state.favouriteItemIds.filter(id => id !== itemId)
 				: [...state.favouriteItemIds, itemId]
 		})),
-	addItemToBasket: (item, size, qty) =>
-		set(state => {
-			const compositeId = `${item.id}-${size}`
-			const existing = state.basketItems.find(i => i.id === compositeId)
 
-			if (existing) {
-				return {
-					basketItems: state.basketItems.map(i =>
-						i.id === compositeId ? {...i, quantity: i.quantity + qty} : i
-					)
+	addItemToBasket: item =>
+		set(state => {
+			const basket = {...state.basket}
+			basket[item.uniqueKey] = item
+			return {basket}
+		}),
+	removeItemFromBasket: key =>
+		set(state => {
+			const basket = {...state.basket}
+			delete basket[key]
+			return {basket}
+		}),
+	incrementItemCount: key =>
+		set(state => {
+			const basket = {...state.basket}
+			const item = basket[key]
+			if (!item) return {basket}
+			basket[key] = {
+				...item,
+				quantity: item.quantity + 1
+			}
+			return {
+				basket
+			}
+		}),
+	decrementItemCount: key =>
+		set(state => {
+			const basket = {...state.basket}
+			const item = basket[key]
+			if (!item) return {basket}
+
+			const newQty = item.quantity - 1
+			if (newQty <= 0) {
+				delete basket[key]
+			} else {
+				basket[key] = {
+					...item,
+					quantity: newQty
 				}
 			}
 
-			const newItem: StoreItem = {
-				...item,
-				id: compositeId,
-				size,
-				quantity: qty
-			}
-
 			return {
-				basketItems: [...state.basketItems, newItem]
+				basket
 			}
 		}),
-
-	removeItem: productId =>
-		set(state => {
-			return {
-				basketItems: state.basketItems.filter(item => item.id != productId)
-			}
-		}),
-	incrementItemCount: productId =>
-		set(state => {
-			return {
-				basketItems: state.basketItems.map(item =>
-					item.id === productId
-						? {...item, quantity: item.quantity + 1}
-						: {...item}
-				)
-			}
-		}),
-	decrementItemCount: productId =>
-		set(state => {
-			return {
-				basketItems: state.basketItems.map(item =>
-					item.id === productId
-						? {...item, quantity: item.quantity - 1}
-						: {...item}
-				)
-			}
-		}),
-	getItemCount: productId => {
-		const foundItem = get().basketItems.find(item => item.id === productId)
-		return foundItem ? (foundItem.quantity ?? 0) : 0
+	getItemCount: key => {
+		const item = get().basket[key]
+		return item ? item.quantity : 0
 	},
 	getTotalPrice: () => {
-		return get().basketItems.reduce(
-			(total, item) => total + (item.price ?? 0) * (item.quantity ?? 0),
+		const basket = get().basket
+		return Object.values(basket).reduce(
+			(total, item) => total + item.price * item.quantity,
 			0
 		)
 	},
-	getGroupedItems: () => get().basketItems,
-	clearBasket: () => set({basketItems: []})
+	clearBasket: () => set({basket: {}})
 })

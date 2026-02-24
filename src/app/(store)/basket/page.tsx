@@ -11,14 +11,17 @@ import {
 	createCheckoutSession,
 	Metadata
 } from '../../../lib/checkoutSession/actions/createCheckoutSession'
-import useStore from '../store'
+import useStore from '../../../store'
 
 function BasketPage() {
-	const groupedItems = useStore(state => state.getGroupedItems()).filter(
-		item => item.quantity > 0
+	const basket = useStore(state => state.basket)
+	const removeItemFromBasket = useStore(state => state.removeItemFromBasket)
+	const clearBasket = useStore(state => state.clearBasket)
+	const groupedItems = Object.values(basket).filter(item => item.quantity > 0)
+	const totalPrice = Object.values(basket).reduce(
+		(total, item) => total + item.price * item.quantity,
+		0
 	)
-	const {removeItem, clearBasket} = useStore()
-
 	const {isSignedIn} = useAuth()
 	const {user} = useUser()
 
@@ -74,13 +77,13 @@ function BasketPage() {
 				<div className='flex-grow'>
 					{groupedItems?.map(item => (
 						<div
-							key={item.id}
+							key={item.uniqueKey}
 							className='mb-4 p-4 border rounded flex items-center justify-between'>
 							<div className='flex items-center flex-1 min-w-0'>
 								<div className='w-20 h-20 sm:w-h-24 flex-shrink-0 mr-4'>
-									{item.imageUrl && (
+									{item.image && (
 										<Image
-											src={item.imageUrl}
+											src={item.image}
 											alt={item.name ?? 'Product image'}
 											className='w-full h-full object-cover rounded'
 											width={96}
@@ -100,11 +103,11 @@ function BasketPage() {
 										</p>
 										<div className='flex items-center flex-shrink-0 space-x-4'>
 											<IncrementAndDecrementButton
-												productId={item.id}
+												uniqueKey={item.uniqueKey}
 												disabled={item.quantity === 0}
 											/>
 											<button
-												onClick={() => removeItem(item.id)}
+												onClick={() => removeItemFromBasket(item.uniqueKey)}
 												className='flex space-x-2 hover:cursor-pointer hover:underline decoration-red-500'>
 												<span className='hidden md:block text-red-500'>
 													Remove
@@ -135,9 +138,9 @@ function BasketPage() {
 								)}
 							</span>
 						</p>
-						<p className='flex justify-between text-2xl font-bold borde-t pt-2'>
+						<p className='flex justify-between text-2xl font-bold border-t pt-2'>
 							<span>Total:</span>
-							<span>£{useStore.getState().getTotalPrice().toFixed(2)}</span>
+							<span>£{totalPrice.toFixed(2)}</span>
 						</p>
 					</div>
 					{isSignedIn ? (

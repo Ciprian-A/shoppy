@@ -1,5 +1,4 @@
 'use client'
-import useStore from '@/app/(store)/store'
 import {ItemSize} from '@/app/(store)/store/storeSlice'
 import {
 	Select,
@@ -8,6 +7,7 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@/components/ui/select'
+import useStore from '@/store'
 import {ItemDTO} from '@/types/item'
 
 interface SizeSelectorProps {
@@ -15,8 +15,9 @@ interface SizeSelectorProps {
 }
 
 function SizeSelector({product}: SizeSelectorProps) {
-	const {setSelectedSize, getSelectedSize} = useStore()
 	const availableSizeList = product?.variants?.map(p => p.size) as string[]
+	const getSelectedSize = useStore(state => state.getSelectedSize)
+	const setSelectedSize = useStore(state => state.setSelectedSize)
 	const selectedSize = getSelectedSize(product.id)
 
 	const handleValueChange = (value: string) => {

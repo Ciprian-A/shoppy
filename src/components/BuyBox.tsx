@@ -1,59 +1,64 @@
 'use client'
 
-import useStore from '@/app/(store)/store'
-import {ItemDTO} from '@/types/item'
+import useStore from '@/store'
+import {VariantDTO} from '@/types/item'
 import AddToBasket from './AddToBasket'
 import BuyItNow from './BuyItNow'
 import QuantitySelector from './QuantitySelector'
 import {Separator} from './ui/separator'
 
 interface BuyBoxProps {
-	product: ItemDTO
+	id: string
+	price: number
+	variants: VariantDTO[]
+	name: string
+	slug: string
+	image: string
 }
-const BuyBox = ({product}: BuyBoxProps) => {
-	const {getSelectedSize} = useStore()
-	const isOutOfStock = !product?.variants?.some(p => (p?.stock ?? 0) > 0)
-	const activeSize = getSelectedSize(product.id)
-	const availableStock = product?.variants?.find(p => p.size === activeSize)
+const BuyBox = ({id, price, variants, name, slug, image}: BuyBoxProps) => {
+	const isOutOfStock = !variants?.some(p => (p?.stock ?? 0) > 0)
+	const activeSize = useStore(state => state.getSelectedSize(id))
+	const availableStock = variants?.find(p => p.size === activeSize)
+	const quantity = useStore(state => state.getSelectedQuantity(id))
 	return (
 		<div className='w-full lg:w-[35%] flex flex-col border rounded-md p-3 mt-4 lg:mt-0 max-h-max'>
-			{!activeSize ? (
-				<>
-					<p className='text-base mb-1'>
-						To buy, select <span className='font-bold'>Size</span>
+			<div className='h-full flex flex-col justify-between'>
+				<div>
+					<p>£{price}</p>
+					<p
+						className={`text-xl font-semibold ${isOutOfStock ? 'text-red-500' : 'text-green-600'}`}>
+						{isOutOfStock ? 'Out of stock' : 'In stock'}
 					</p>
-					<AddToBasket product={product} disabled />
-				</>
-			) : (
-				<div className='h-full flex flex-col justify-between'>
-					<div>
-						<p>£{product?.price}</p>
-						<p
-							className={`text-xl font-semibold ${isOutOfStock ? 'text-red-500' : 'text-green-600'}`}>
-							{isOutOfStock ? 'Out of stock' : 'In stock'}
+					{!isOutOfStock && (
+						<p className='text-sm text-gray-500 mt-2'>
+							The delivery is estimated to take 3-5 working days.
 						</p>
-						{!isOutOfStock && (
-							<p className='text-sm text-gray-500 mt-2'>
-								The delivery is estimated to take 3-5 working days.
-							</p>
-						)}
-					</div>
-					<Separator className='my-4' />
-					<div className=' space-y-3 '>
-						<div>
-							<p className='text-base mb-2'>
-								Quantity<span className='text-red-500'>*</span>
-							</p>
-							<QuantitySelector
-								qty={availableStock?.stock ?? 0}
-								productId={product.id}
-							/>
-						</div>
-						<BuyItNow product={product} />
-						<AddToBasket product={product} />
-					</div>
+					)}
 				</div>
-			)}
+				<Separator className='my-4' />
+				<div className=' space-y-3 '>
+					<div>
+						<p className='text-base mb-2'>Quantity: {quantity}</p>
+						<QuantitySelector qty={availableStock?.stock ?? 0} productId={id} />
+					</div>
+					<BuyItNow
+						productId={id}
+						name={name}
+						slug={slug}
+						price={price}
+						image={image}
+						variants={variants}
+					/>
+					<AddToBasket
+						productId={id}
+						name={name}
+						slug={slug}
+						price={price}
+						image={image}
+						variants={variants}
+					/>
+				</div>
+			</div>
 		</div>
 	)
 }

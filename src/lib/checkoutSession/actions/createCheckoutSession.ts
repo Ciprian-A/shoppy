@@ -1,6 +1,6 @@
 'use server'
 
-import {StoreItem} from '@/app/(store)/store/storeSlice'
+import {Basket} from '@/app/(store)/store/storeSlice'
 import {stripUuidSuffix} from '@/lib/stripUuidSuffix'
 import stripe from '@/lib/stripe'
 
@@ -14,7 +14,7 @@ export type Metadata = {
 }
 
 export const createCheckoutSession = async (
-	items: StoreItem[],
+	items: Basket[],
 	metadata: Metadata
 ) => {
 	try {
@@ -52,12 +52,12 @@ export const createCheckoutSession = async (
 					unit_amount: Math.round(item.price! * 100),
 					product_data: {
 						name: item.name || 'Unnamed Product',
-						description: `Product ID: ${item.id}`,
+						description: `Product ID: ${item.uniqueKey}, Size: ${item.size}`,
 						metadata: {
-							itemId: stripUuidSuffix(item.id),
+							itemId: stripUuidSuffix(item.uniqueKey),
 							size: item.size
 						},
-						images: item.imageUrl ? [item.imageUrl] : undefined
+						images: item.image ? [item.image] : undefined
 					}
 				},
 				quantity: item.quantity

@@ -1,27 +1,25 @@
 'use client'
 
-import useStore from '@/app/(store)/store'
 import {ItemSize} from '@/app/(store)/store/storeSlice'
 import {getDefaultSizeIndex} from '@/lib/getDefaultSizeIndex'
-import {useEffect, useState} from 'react'
+import useStore from '@/store'
+import {useState} from 'react'
 import {Button} from './ui/button'
 
 function SizeList({sizes, productId}: {sizes: string[]; productId: string}) {
 	const {setSelectedSize} = useStore()
 	const [hoverSize, setHoverSize] = useState<string | null>(null)
 	const selectedSize = useStore(state => state.getSelectedSize(productId))
-	const defaultSize = getDefaultSizeIndex(sizes.length)
+	const defaultSizeIndex = getDefaultSizeIndex(sizes.length)
+	const defaultSize = sizes[defaultSizeIndex] as ItemSize
 
-	useEffect(() => {
-		if (!selectedSize) {
-			setSelectedSize(productId, sizes[defaultSize] as ItemSize)
-		}
-	}, [selectedSize])
+	if (!selectedSize && sizes.length > 0) {
+		setSelectedSize(productId, defaultSize)
+	}
 
 	const handleSelectSize = (size: string) => {
 		setSelectedSize(productId, size as ItemSize)
 	}
-
 	if (!sizes.length) return null
 	return (
 		<>

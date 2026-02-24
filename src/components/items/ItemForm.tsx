@@ -603,6 +603,8 @@ export default function ItemForm({
 														<Image
 															src={src}
 															alt={`Gallery preview ${idx + 1}`}
+															width={300}
+															height={300}
 															className='h-24 w-24 object-cover rounded-lg border-2 border-gray-200'
 														/>
 														<Button

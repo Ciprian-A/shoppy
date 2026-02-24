@@ -1,7 +1,6 @@
 'use client'
 
 import {useAuthModal} from '@/app/(store)/authModalStore'
-import useStore from '@/app/(store)/store'
 import {
 	Carousel,
 	CarouselContent,
@@ -11,6 +10,7 @@ import {
 	CarouselSideNav,
 	type CarouselApi
 } from '@/components/ui/carousel'
+import {favoritesChannel} from '@/favoritesChannel'
 import {toggleFavoriteItem} from '@/lib/items/actions/items'
 import {useUser} from '@clerk/nextjs'
 import {EmblaPluginType} from 'embla-carousel'
@@ -19,34 +19,39 @@ import Fade from 'embla-carousel-fade'
 import {Heart} from 'lucide-react'
 
 import Image from 'next/image'
-import {useEffect, useState} from 'react'
+import {useRouter} from 'next/navigation'
+import {useEffect, useState, useTransition} from 'react'
 
 const ImageCarousel = ({
 	gallery,
 	id,
 	name,
+	slug,
 	isFavouriteInDB = false,
 	sideNav = false,
 	autoplay = false
 }: {
 	id: string
 	name: string
+	slug: string
 	gallery: string[]
+	favorites?: {userId: string; itemId: string}[]
 	isFavouriteInDB: boolean
 	sideNav?: boolean
 	autoplay?: boolean
 }) => {
 	const [api, setApi] = useState<CarouselApi>()
 	const [current, setCurrent] = useState(0)
-	const {updateFavouriteItem} = useStore()
-	const item = useStore(state => state.storeItems.find(i => i.id === id))
+
 	const {user} = useUser()
 	const {open: openAuthModal} = useAuthModal()
+	const [isFavorite, setIsFavorite] = useState(isFavouriteInDB)
 
-	const isFavouriteInStore = useStore(state =>
-		state.favouriteItemIds.includes(id)
-	)
-	const isFavouriteItem = isFavouriteInStore || isFavouriteInDB
+	const [isPending, startTransition] = useTransition()
+	const router = useRouter()
+
+	if (typeof window === 'undefined') return null
+
 	const autoplayPlugin = autoplay ? Autoplay({delay: 5000}) : undefined
 	const fadePlugin = Fade()
 	const plugins = [autoplayPlugin, fadePlugin].filter(
@@ -64,21 +69,23 @@ const ImageCarousel = ({
 		})
 	}, [api])
 
+	useEffect(() => {
+		setIsFavorite(isFavouriteInDB)
+	}, [isFavouriteInDB])
+
 	const handleFavouriteToggle = async () => {
-		if (!item?.id) return
+		if (!id) return
 
 		if (!user) {
 			openAuthModal()
 			return
 		}
 
-		updateFavouriteItem(item.id)
-
-		try {
-			await toggleFavoriteItem(user.id, item.id)
-		} catch {
-			updateFavouriteItem(item.id)
-		}
+		setIsFavorite(prev => !prev)
+		startTransition(async () => {
+			await toggleFavoriteItem(user?.id!, id, slug)
+			favoritesChannel.postMessage({type: 'refresh'})
+		})
 	}
 	return (
 		<Carousel
@@ -102,7 +109,7 @@ const ImageCarousel = ({
 						))}
 					</CarouselContent>
 					<Heart
-						className={` w-8 h-8 md:w-14 md:h-14 p-2 absolute top-6 right-6 bg-white shadow hover:shadow-lg rounded-full cursor-pointer focus:outline-none ${isFavouriteItem ? 'text-red-500 fill-current' : ''}`}
+						className={` w-8 h-8 md:w-14 md:h-14 p-2 absolute top-6 right-6 bg-white shadow hover:shadow-lg rounded-full cursor-pointer focus:outline-none ${isFavorite ? 'text-red-500 fill-current' : ''}`}
 						onClick={handleFavouriteToggle}
 						strokeWidth={1.5}
 					/>

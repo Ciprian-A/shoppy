@@ -1,4 +1,3 @@
-import useStore from '@/app/(store)/store'
 import {
 	Select,
 	SelectContent,
@@ -6,6 +5,7 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@/components/ui/select'
+import useStore from '@/store'
 const QuantitySelector = ({
 	qty,
 	productId
@@ -13,13 +13,12 @@ const QuantitySelector = ({
 	qty: number
 	productId: string
 }) => {
-	
-	const {getSelectedQuantity, setSelectedQuantity} = useStore()
+	const selectedQty = useStore(state => state.getSelectedQuantity(productId))
+	const setSelectedQuantity = useStore(state => state.setSelectedQuantity)
 
 	const handleValueChange = (value: string) => {
 		setSelectedQuantity(productId, Number(value))
 	}
-	const selectedQty = getSelectedQuantity(productId)
 	return (
 		<div>
 			<Select

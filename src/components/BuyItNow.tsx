@@ -1,66 +1,67 @@
-import useStore from '@/app/(store)/store'
-import {ItemDTO} from '@/types/item'
+'use client'
+import useStore from '@/store'
+
 import {SignInButton, useAuth, useUser} from '@clerk/nextjs'
-import {useEffect, useState} from 'react'
+import {useState} from 'react'
 import {
 	createCheckoutSession,
 	Metadata
 } from '../lib/checkoutSession/actions/createCheckoutSession'
-import Loader from './Loader'
 import {Button} from './ui/button'
 
 interface BuyItNowProps {
-	product: ItemDTO
+	productId: string
+	name: string
+	slug: string
+	price: number
+	image: string
+	variants: {size: string; stock: number}[]
 }
 
-const BuyItNow = ({product}: BuyItNowProps) => {
-	const [isClient, setIsClient] = useState(false)
+const BuyItNow = ({
+	productId,
+	name,
+	slug,
+	price,
+	image,
+	variants
+}: BuyItNowProps) => {
 	const [isLoading, setIsloading] = useState(false)
-	const {
-		addItemToBasket,
-		getSelectedSize,
-		setSelectedSize,
-		getSelectedQuantity,
-		setSelectedQuantity,
-		getGroupedItems
-	} = useStore()
-
-	const items = useStore().storeItems
 	const {isSignedIn} = useAuth()
 	const {user} = useUser()
+	const activeSize = useStore(state => state.getSelectedSize(productId))
+	const quantity = useStore(state => state.getSelectedQuantity(productId))
+	const addToBasket = useStore(state => state.addItemToBasket)
 
-	const size = getSelectedSize(product.id)
-	const selectedQty = getSelectedQuantity(product.id)
-	useEffect(() => {
-		setIsClient(true)
-	}, [])
+	const selectedVariant = variants.find(v => v.size === activeSize)
+	const availableStock = selectedVariant?.stock ?? 0
 
-	if (!isClient) {
-		return <Loader />
-	}
+	const isDisabled = !activeSize || quantity < 1 || quantity > availableStock
 
 	const handleBuyItNow = async () => {
-		if (!isSignedIn) return
+		if (!isSignedIn || isDisabled) return
 		setIsloading(true)
-		const itemToBeAddedToBasket = items.find(i => i.id === product.id)
-
 		try {
-			const groupedItems = getGroupedItems().filter(item => item.quantity > 0)
-
-			if (itemToBeAddedToBasket && size !== undefined) {
-				addItemToBasket(itemToBeAddedToBasket, size, selectedQty)
+			const basketItem = {
+				uniqueKey: `${productId}-${activeSize}`,
+				productId,
+				name,
+				slug,
+				price,
+				size: activeSize,
+				quantity,
+				image
 			}
+			addToBasket(basketItem)
 			const metadata: Metadata = {
 				orderNumber: crypto.randomUUID(),
 				customerName: user?.fullName ?? 'Unknown',
 				customerEmail: user?.emailAddresses[0].emailAddress ?? 'Unknown',
 				storeUserId: user!.id
 			}
-			const checkoutUrl = await createCheckoutSession(groupedItems, metadata)
+			const checkoutUrl = await createCheckoutSession([basketItem], metadata)
 			if (checkoutUrl) {
 				window.location.href = checkoutUrl
-				setSelectedSize(product.id, '')
-				setSelectedQuantity(product.id, 1)
 			}
 		} catch (error) {
 			console.error('Error creating checkout session:', error)

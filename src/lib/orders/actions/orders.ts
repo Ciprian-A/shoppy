@@ -119,7 +119,7 @@ export async function createOrder(session: Stripe.Checkout.Session) {
 				},
 				data: {
 					stock: {
-						decrement: quantity // Prisma built-in atomic decrement
+						decrement: quantity
 					}
 				}
 			})

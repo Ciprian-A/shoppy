@@ -1,15 +1,16 @@
 'use client'
 
-import useStore from '@/app/(store)/store'
-import {
-	ShoppingCartIcon
-} from 'lucide-react'
+import useStore from '@/store'
+import {ShoppingCartIcon} from 'lucide-react'
 import Link from 'next/link'
 import TooltipHeader from './TooltipHeader'
 
 export const Basket = () => {
 	const itemCount = useStore(state =>
-		state.basketItems.reduce((total, item) => total + item.quantity, 0)
+		Object.values(state.basket).reduce(
+			(total, item) => total + item.quantity,
+			0
+		)
 	)
 	return (
 		<TooltipHeader description='Basket'>
