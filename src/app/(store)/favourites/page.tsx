@@ -1,7 +1,8 @@
 import ProductGrid from '@/components/ProductGrid'
-// import ProductsView from '@/components/ProductsView'
 import {getFavouriteItemsByUser} from '@/lib/items/items'
 import {getCurrentUserFromDB} from '@/lib/users/actions/users'
+
+export const dynamic = 'force-dynamic'
 
 export default async function FavouritesPage() {
 	const currentUser = await getCurrentUserFromDB()
