@@ -1,4 +1,5 @@
-import ProductsView from '@/components/ProductsView'
+import ProductGrid from '@/components/ProductGrid'
+// import ProductsView from '@/components/ProductsView'
 import {getFavouriteItemsByUser} from '@/lib/items/items'
 import {getCurrentUserFromDB} from '@/lib/users/actions/users'
 
@@ -31,5 +32,14 @@ export default async function FavouritesPage() {
 			</div>
 		)
 	}
-	return <div>{<ProductsView products={mappedProducts} />}</div>
+	return (
+		<div className='flex flex-col items-center justify-top w-full min-h-screen bg-gray-100 '>
+			<div className='bg-white p-8 rounded-lg shadow-md w-full min-h-screen '>
+				<h1 className='text-2xl font-bold mb-6 '>
+					{currentUser?.name}'s Favourites
+				</h1>
+				<ProductGrid products={mappedProducts} />
+			</div>
+		</div>
+	)
 }
