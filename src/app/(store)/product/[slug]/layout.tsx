@@ -1,6 +1,5 @@
 import {getItemBySlug} from '@/lib/items/items'
 import type {Metadata} from 'next'
-import {Suspense} from 'react'
 
 export async function generateMetadata({
 	params
@@ -21,5 +20,5 @@ export default async function ProductLayout({
 }: Readonly<{
 	children: React.ReactNode
 }>) {
-	return <Suspense>{children}</Suspense>
+	return <>{children}</>
 }

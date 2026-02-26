@@ -151,12 +151,7 @@ export const deleteItem = async (id: string) => {
 	}
 }
 
-export const toggleFavoriteItem = async (
-	userId: string,
-	itemId: string,
-	slug: string
-) => {
-	const pathsToRevalidate = [`/product/${slug}`, '/favourites', '/']
+export const toggleFavoriteItem = async (userId: string, itemId: string) => {
 	try {
 		const existingFavorite = await prisma.favorite.findUnique({
 			where: {
@@ -176,7 +171,6 @@ export const toggleFavoriteItem = async (
 					}
 				}
 			})
-			pathsToRevalidate.forEach(p => revalidatePath(p))
 
 			return {action: 'removed'}
 		} else {
@@ -186,7 +180,6 @@ export const toggleFavoriteItem = async (
 					itemId
 				}
 			})
-			pathsToRevalidate.forEach(p => revalidatePath(p))
 
 			return {action: 'added'}
 		}

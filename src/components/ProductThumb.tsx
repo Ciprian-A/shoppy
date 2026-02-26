@@ -1,23 +1,26 @@
 import {useUser} from '@clerk/nextjs'
 import Image from 'next/image'
 import Link from 'next/link'
-import React, {useState, useTransition} from 'react'
+import React, {useTransition} from 'react'
 
 import {useAuthModal} from '@/app/(store)/authModalStore'
 import {favoritesChannel} from '@/favoritesChannel'
 import {toggleFavoriteItem} from '@/lib/items/actions/items'
+import useStore from '@/store'
 import {ItemDTO} from '@/types/item'
 import {Heart} from 'lucide-react'
-import {useRouter} from 'next/navigation'
 
 const ProductThumb = ({product}: {product: ItemDTO}) => {
 	const {user} = useUser()
 	const {open: openAuthModal} = useAuthModal()
-	const router = useRouter()
 	const [isPending, startTransition] = useTransition()
-	const [isFavorite, setIsFavorite] = useState(product.favourites?.length! > 0)
+
+	const addFavoriteItem = useStore(state => state.addFavoriteItem)
+	const removeFavoriteItem = useStore(state => state.removeFavoriteItem)
+	const favorites = useStore(state => state.favoriteItems)
 
 	const isOutOfStock = !product?.variants?.some(p => (p?.stock ?? 0) > 0)
+	const isFavorite = favorites.some(fav => fav.id === product.id)
 
 	const handleFavouriteToggle = async (
 		e: React.MouseEvent<SVGSVGElement, MouseEvent>
@@ -29,11 +32,20 @@ const ProductThumb = ({product}: {product: ItemDTO}) => {
 			openAuthModal()
 			return
 		}
-		setIsFavorite(prev => !prev) // optimistic UI
 
+		if (isFavorite) {
+			removeFavoriteItem(product.id)
+		} else {
+			addFavoriteItem(product)
+		}
+
+		favoritesChannel?.postMessage({
+			type: 'favorite-toggled',
+			item: product,
+			action: isFavorite ? 'removed' : 'added'
+		})
 		startTransition(async () => {
-			await toggleFavoriteItem(user?.id!, product.id, product.slug)
-			favoritesChannel.postMessage({type: 'refresh'})
+			await toggleFavoriteItem(user?.id!, product.id)
 		})
 	}
 	return (

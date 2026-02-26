@@ -1,3 +1,4 @@
 'use client'
 
-export const favoritesChannel = new BroadcastChannel('favorites-sync')
+export const favoritesChannel =
+	typeof window !== 'undefined' ? new BroadcastChannel('favorites-sync') : null

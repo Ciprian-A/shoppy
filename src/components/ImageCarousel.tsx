@@ -12,6 +12,8 @@ import {
 } from '@/components/ui/carousel'
 import {favoritesChannel} from '@/favoritesChannel'
 import {toggleFavoriteItem} from '@/lib/items/actions/items'
+import useStore from '@/store'
+import {ItemDTO} from '@/types/item'
 import {useUser} from '@clerk/nextjs'
 import {EmblaPluginType} from 'embla-carousel'
 import Autoplay from 'embla-carousel-autoplay'
@@ -19,7 +21,6 @@ import Fade from 'embla-carousel-fade'
 import {Heart} from 'lucide-react'
 
 import Image from 'next/image'
-import {useRouter} from 'next/navigation'
 import {useEffect, useState, useTransition} from 'react'
 
 const ImageCarousel = ({
@@ -27,7 +28,7 @@ const ImageCarousel = ({
 	id,
 	name,
 	slug,
-	isFavouriteInDB = false,
+	product,
 	sideNav = false,
 	autoplay = false
 }: {
@@ -36,21 +37,26 @@ const ImageCarousel = ({
 	slug: string
 	gallery: string[]
 	favorites?: {userId: string; itemId: string}[]
-	isFavouriteInDB: boolean
 	sideNav?: boolean
 	autoplay?: boolean
+	product: ItemDTO
 }) => {
 	const [api, setApi] = useState<CarouselApi>()
 	const [current, setCurrent] = useState(0)
 
 	const {user} = useUser()
 	const {open: openAuthModal} = useAuthModal()
-	const [isFavorite, setIsFavorite] = useState(isFavouriteInDB)
 
 	const [isPending, startTransition] = useTransition()
-	const router = useRouter()
 
 	if (typeof window === 'undefined') return null
+
+	const isFavorite = useStore(state =>
+		state.favoriteItems.some(i => i.id === id)
+	)
+
+	const addFavoriteItem = useStore(state => state.addFavoriteItem)
+	const removeFavoriteItem = useStore(state => state.removeFavoriteItem)
 
 	const autoplayPlugin = autoplay ? Autoplay({delay: 5000}) : undefined
 	const fadePlugin = Fade()
@@ -69,10 +75,6 @@ const ImageCarousel = ({
 		})
 	}, [api])
 
-	useEffect(() => {
-		setIsFavorite(isFavouriteInDB)
-	}, [isFavouriteInDB])
-
 	const handleFavouriteToggle = async () => {
 		if (!id) return
 
@@ -81,10 +83,19 @@ const ImageCarousel = ({
 			return
 		}
 
-		setIsFavorite(prev => !prev)
+		if (isFavorite) {
+			removeFavoriteItem(product.id)
+		} else {
+			addFavoriteItem(product)
+		}
+		favoritesChannel?.postMessage({
+			type: 'favorite-toggled',
+			item: product,
+			action: isFavorite ? 'removed' : 'added'
+		})
+
 		startTransition(async () => {
-			await toggleFavoriteItem(user?.id!, id, slug)
-			favoritesChannel.postMessage({type: 'refresh'})
+			await toggleFavoriteItem(user?.id!, id)
 		})
 	}
 	return (

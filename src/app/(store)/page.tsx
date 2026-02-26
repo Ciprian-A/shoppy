@@ -3,8 +3,8 @@ import PromoBanner from '@/components/PromoBanner'
 import {getItems} from '@/lib/items/items'
 import {getCategories} from '../../lib/categories/categories'
 
-export const dynamic = 'force-static'
-export const revalidate = 0 // revaliate at most every 60 seconds
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default async function Home() {
 	const items = await getItems()

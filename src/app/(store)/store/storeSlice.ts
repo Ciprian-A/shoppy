@@ -1,3 +1,4 @@
+import {ItemDTO} from '@/types/item'
 import {StateCreator} from 'zustand'
 
 export type Basket = {
@@ -16,6 +17,7 @@ type StoreState = {
 	selectedSizes: Record<string, ItemSize>
 	selectedQuantities: Record<string, number>
 	basket: Record<string, Basket>
+	favoriteItems: ItemDTO[]
 }
 export type ItemSize =
 	| '5'
@@ -43,7 +45,8 @@ export type ItemSize =
 	| '3XL'
 	| ''
 type StoreActions = {
-	updateFavouriteItem: (itemId: string) => void
+	addFavoriteItem: (item: ItemDTO) => void
+	removeFavoriteItem: (id: string) => void
 	setSelectedSize: (id: string, size: ItemSize) => void
 	getSelectedSize: (id: string) => ItemSize
 	setSelectedQuantity: (id: string, qty: number) => void
@@ -67,6 +70,7 @@ export const createStoreSlice: StateCreator<StoreSlice, [], [], StoreSlice> = (
 	selectedSizes: {},
 	selectedQuantities: {},
 	basket: {},
+	favoriteItems: [],
 	setSelectedSize: (id, size) => {
 		set(state => ({
 			selectedSizes: {
@@ -84,13 +88,16 @@ export const createStoreSlice: StateCreator<StoreSlice, [], [], StoreSlice> = (
 			}
 		})),
 	getSelectedQuantity: productId => get().selectedQuantities[productId] ?? 1,
-	updateFavouriteItem: itemId =>
+	addFavoriteItem: (item: ItemDTO) =>
 		set(state => ({
-			favouriteItemIds: state.favouriteItemIds.includes(itemId)
-				? state.favouriteItemIds.filter(id => id !== itemId)
-				: [...state.favouriteItemIds, itemId]
+			favoriteItems: state.favoriteItems.some(i => i.id === item.id)
+				? state.favoriteItems
+				: [...state.favoriteItems, item]
 		})),
-
+	removeFavoriteItem: (id: string) =>
+		set(state => ({
+			favoriteItems: state.favoriteItems.filter(i => i.id !== id)
+		})),
 	addItemToBasket: item =>
 		set(state => {
 			const basket = {...state.basket}
@@ -131,7 +138,6 @@ export const createStoreSlice: StateCreator<StoreSlice, [], [], StoreSlice> = (
 					quantity: newQty
 				}
 			}
-
 			return {
 				basket
 			}
